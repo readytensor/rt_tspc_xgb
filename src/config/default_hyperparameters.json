@@ -1,0 +1,8 @@
+{
+  "encode_len": 6,
+  "n_estimators": 100,
+  "max_depth": null,
+  "min_samples_split":  2,
+  "eta": 0.3,
+  "gamma": 0.0
+}
