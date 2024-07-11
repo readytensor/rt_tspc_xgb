@@ -8,6 +8,7 @@ from prediction.predictor_model import (
 from preprocessing.preprocess import (
     get_preprocessing_pipelines,
     fit_transform_with_pipeline,
+    fit_pipeline,
     save_pipelines,
 )
 from schema.data_schema import load_json_data_schema, save_schema
@@ -104,6 +105,7 @@ def run_training(
                 )
 
                 hyperparameters.update(tuned_hyperparameters)
+                logger.info(f"Tuned hyperparameters: {hyperparameters}")
 
             logger.info("Fitting preprocessing pipelines...")
             training_pipeline, inference_pipeline = get_preprocessing_pipelines(
@@ -115,13 +117,18 @@ def run_training(
                 training_pipeline, validated_data
             )
 
-            print("Transformed data shape: ", transformed_data.shape)
+            inference_pipeline = fit_pipeline(inference_pipeline, validated_data)
 
-            logger.info("Training annotator...")
-            annotator = train_predictor_model(
+            logger.info(f"Transformed data shape: {transformed_data.shape}")
+            trimmed_encode_len = transformed_data.shape[1]
+            hyperparameters["encode_len"] = trimmed_encode_len
+
+            logger.info("Training classifier...")
+            classifier = train_predictor_model(
                 train_data=transformed_data,
                 data_schema=data_schema,
                 hyperparameters=hyperparameters,
+                padding_value=preprocessing_config["padding_value"],
             )
 
         # Save pipelines
@@ -129,8 +136,8 @@ def run_training(
         save_pipelines(trained_pipeline, inference_pipeline, preprocessing_dir_path)
 
         # save predictor model
-        logger.info("Saving annotator...")
-        save_predictor_model(annotator, predictor_dir_path)
+        logger.info("Saving classifier...")
+        save_predictor_model(classifier, predictor_dir_path)
 
     except Exception as exc:
         err_msg = "Error occurred during training."
